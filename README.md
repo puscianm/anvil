@@ -1,3 +1,5 @@
+![alt text](img/Anvil_banner_with_text.png "Title")
+
 # Adaptive Rounding for Post-Training Quantization applied to deep neural networks
 TBD
 
