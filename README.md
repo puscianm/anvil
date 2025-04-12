@@ -1,4 +1,5 @@
 # Adaptive Rounding for Post-Training Quantization applied to deep neural networks
+TBD
 
 ## Table of Contents
 - [Setup](#Setup)
@@ -7,8 +8,10 @@
 - [Sources](#Sources)
 
 # Setup
+TBD
 
 # Introduction
+TBD
 
 # Sources
 - [M. Nagel, et al.2020.Up or Down? Adaptive Rounding for Post-Training Quantization, arXiv](https://arxiv.org/abs/2004.10568)
