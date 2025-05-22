@@ -28,14 +28,13 @@ def get_qparams(tensor, qmin, qmax, per_channel=False, channel_axis=0):
         min_vals = tensor.min()
         max_vals = tensor.max()
     scale = (max_vals - min_vals) / float(qmax - qmin)
-    scale = torch.clamp(scale, min=1e-8)
-    zero_point = torch.round(qmin - min_vals / scale)
+    zero_point = -torch.round(min_vals / scale) + qmin
     return scale, zero_point
 
 def quantize_tensor(tensor, scale, zero_point, qmin, qmax):
-    q = torch.round(tensor / scale + zero_point)
+    q = torch.floor(tensor / scale + zero_point) 
     q = torch.clamp(q, qmin, qmax)
-    return scale * (q - zero_point)
+    return scale * (q - zero_point) 
 
 def adaround_layer(layer, inputs, num_iterations=1000, beta_range=(20, 2), reg_param=0.01, per_channel=True):
     assert isinstance(layer, nn.Conv2d), "Only Conv2d supported"
@@ -83,10 +82,11 @@ def adaround_layer(layer, inputs, num_iterations=1000, beta_range=(20, 2), reg_p
 
     # Finalizacja
     h_alpha = torch.clamp(torch.sigmoid(best_alpha) * 1.2 - 0.1, 0, 1)
-    print(f"final h_alpha: {h_alpha}")
+    #print(f"final h_alpha: {h_alpha}")
     final_w_q = scale_w * (torch.floor(weight / scale_w + zp_w) + h_alpha - zp_w)
+    print(f"final_wq: {final_w_q}")
 
-    return final_w_q
+    return final_w_q, scale_w, zp_w
 
 # --- Wrapper ---
 
@@ -119,9 +119,12 @@ class AdaRoundModelWrapper:
                     raise RuntimeError(f"Nie udało się przechwycić wejścia do warstwy {name}")
 
                 # Kwantyzacja wag
-                quantized_weights = adaround_layer(module, captured_input)
+                quantized_weights, scale_w, zp_w = adaround_layer(module, captured_input)
                 module.weight.data.copy_(quantized_weights)
                 print(f"[AdaRound] -> Done.")
+                return scale_w, zp_w
+                
+            
 
     def save_model(self, path):
         torch.save(self.model.state_dict(), path)
