@@ -83,7 +83,6 @@ def adaround_layer(layer, inputs, num_iterations=1000, beta_range=(20, 2), reg_p
 
     # Finalizacja
     h_alpha = torch.clamp(torch.sigmoid(best_alpha) * 1.2 - 0.1, 0, 1)
-    print(f"final h_alpha: {h_alpha}")
     final_w_q = scale_w * (torch.floor(weight / scale_w + zp_w) + h_alpha - zp_w)
 
     return final_w_q
