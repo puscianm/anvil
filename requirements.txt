@@ -1,0 +1,4 @@
+# appropriate pytorch to your system
+# latex library for scienceplots
+SciencePlots==2.1.1
+jupyterlab==4.4.2
