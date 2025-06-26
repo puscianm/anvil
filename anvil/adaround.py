@@ -40,16 +40,21 @@ def adaround_weight(weight, alpha, gamma=-0.1, zeta=1.2):
     return AdaRoundFunction.apply(weight, alpha, gamma, zeta)
 
 def get_qparams(tensor, qmin, qmax, per_channel=False, channel_axis=0, 
-                use_quantiles=False, lower_quantile=0.01, upper_quantile=0.99):
-    if use_quantiles:
+                use_quantiles=False, lower_quantile=0.01, upper_quantile=0.99, layer_weights = None):
+    if torch.var(tensor).item() < 0.0005:
+        low_variance = True
+    else:
+        low_variance = False
+    
+    if use_quantiles and low_variance:
         if per_channel:
             # Move channel axis to dim0 and flatten other dims
             tensor_perm = tensor.movedim(channel_axis, 0)
             flattened = tensor_perm.reshape(tensor_perm.shape[0], -1)
             
             # Compute quantiles per channel
-            min_vals = torch.quantile(flattened, lower_quantile, dim=1, keepdim=True)
-            max_vals = torch.quantile(flattened, upper_quantile, dim=1, keepdim=True)
+            min_vals = torch.quantile(flattened, lower_quantile, dim=1, keepdim=True, interpolation = 'nearest')
+            max_vals = torch.quantile(flattened, upper_quantile, dim=1, keepdim=True, interpolation = 'nearest')
             
             # Reshape to [C, 1, 1, ...] and move channel back
             min_vals = min_vals.reshape(min_vals.shape[0], *[1]*(tensor_perm.ndim - 1))
@@ -59,8 +64,8 @@ def get_qparams(tensor, qmin, qmax, per_channel=False, channel_axis=0,
         else:
             # Global quantiles for full tensor
             flattened = tensor.flatten()
-            min_vals = torch.quantile(flattened, lower_quantile)
-            max_vals = torch.quantile(flattened, upper_quantile)
+            min_vals = torch.quantile(flattened, lower_quantile, interpolation = 'nearest')
+            max_vals = torch.quantile(flattened, upper_quantile, interpolation = 'nearest')
             print(f"min: {min_vals}, max: {max_vals}")
     else:
         # Original min/max logic
@@ -142,7 +147,7 @@ def adaround_layer(layer, inputs, model, layer_index, num_iterations, beta_range
         loss_data = F.mse_loss(out_q, out_fp)
 
                 # beta = beta_range[0] * (1 - step / num_iterations) + beta_range[1] * (step / num_iterations)
-        ramp_ratio = 0.8  # 80% kroków to faza rampowania
+        ramp_ratio = 0.7  # 80% kroków to faza rampowania
         ramp_iter = int(num_iterations * ramp_ratio)
 
         if step < ramp_iter:
